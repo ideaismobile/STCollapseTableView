@@ -100,6 +100,10 @@
 
 - (id)forwardingTargetForSelector:(SEL)aSelector
 {
+    if ([super respondsToSelector:aSelector])
+    {
+        return self;
+    }
 	if ([self.collapseDataSource respondsToSelector:aSelector])
     {
 		return self.collapseDataSource;
@@ -113,12 +117,12 @@
 
 - (BOOL)respondsToSelector:(SEL)aSelector
 {
-    if (sel_isEqual(aSelector, @selector(tableView:viewForHeaderInSection:)))
-    {
-        return [self.collapseDelegate respondsToSelector:aSelector];
-    }
-    
-	return [super respondsToSelector:aSelector] || [self.collapseDataSource respondsToSelector:aSelector] || [self.collapseDelegate respondsToSelector:aSelector];
+	if(aSelector == NULL)
+		return NO;
+
+	return [super respondsToSelector:aSelector] ||
+    [self.collapseDataSource respondsToSelector:aSelector] ||
+    [self.collapseDelegate respondsToSelector:aSelector];
 }
 
 - (void)openSection:(NSUInteger)sectionIndex animated:(BOOL)animated
@@ -288,28 +292,22 @@
 
 #pragma mark - Delegate
 
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (self.collapseDelegate && [self.collapseDelegate respondsToSelector:_cmd])
+    {
+        [self.collapseDelegate tableView:tableView didSelectRowAtIndexPath:indexPath];
+    }
+}
+
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
 {
     UIView* view = [self.collapseDelegate tableView:tableView viewForHeaderInSection:section];
     
     if (self.shouldHandleHeadersTap)
     {
-        NSArray* gestures = view.gestureRecognizers;
-        BOOL tapGestureFound = NO;
-        for (UIGestureRecognizer* gesture in gestures)
-        {
-            if ([gesture isKindOfClass:[UITapGestureRecognizer class]])
-            {
-                tapGestureFound = YES;
-                break;
-            }
-        }
-        
-        if (!tapGestureFound)
-        {
-            [view setTag:section];
-            [view addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)]];
-        }
+        [view setTag:section];
+        [view addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)]];
     }
     
     return view;
